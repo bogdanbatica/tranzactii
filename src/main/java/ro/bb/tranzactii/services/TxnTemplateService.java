@@ -15,7 +15,7 @@ public class TxnTemplateService implements TxnInsertService {
 
     @Override
     @Transactional
-    public synchronized void insertTransactionWithCommit(Transaction transaction) {
+    public void insertTransactionWithCommit(Transaction transaction) {
         transactionTemplateRepository.insert(transaction);
     }
 

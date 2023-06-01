@@ -17,7 +17,7 @@ public class TxnOneStatementService implements TxnInsertService {
 
     @Override
     @Transactional
-    public synchronized void insertTransactionWithCommit(Transaction transaction) {
+    public void insertTransactionWithCommit(Transaction transaction) {
         try {
             transactionOneStatementRepository.insert(transaction);
         } catch (SQLException e) {

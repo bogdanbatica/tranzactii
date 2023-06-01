@@ -15,7 +15,7 @@ public class TxnMyBatisService implements TxnInsertService {
 
     @Override
     @Transactional
-    public synchronized void insertTransactionWithCommit(Transaction transaction) {
+    public void insertTransactionWithCommit(Transaction transaction) {
         transactionMyBatisRepository.insert(transaction);
     }
 

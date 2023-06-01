@@ -10,9 +10,7 @@ import ro.bb.tranzactii.repositories.CommonTxnRepository;
 import ro.bb.tranzactii.util.Time;
 import ro.bb.tranzactii.util.TransactionFactory;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.TreeMap;
 
 @Service
 public class TxnService {
@@ -53,56 +51,34 @@ public class TxnService {
     public void prepareInitialContents(TxnInsertService insertService, int nbr) {
         logger.info("start initializing contents with " + nbr + " transactions - " + insertService.serviceLabel());
         commonTxnRepository.deleteAll();
-
         TransactionFactory factory = new TransactionFactory("EXISTING0000000000");
 
-        insertTransactionBatch(insertService, factory, nbr, 0);
-
+        for (int i = 1; i <= nbr; i++) {
+            Transaction transaction = factory.createTransaction(i);
+            insertService.insertTransactionWithCommit(transaction);
+        }
         logger.info("finished initializing contents");
+
         Time.waitMillis(1000);
     }
 
     public long testInsert(TxnInsertService insertService, int nbr) {
-        logger.info("start writing " + nbr + " current transactions - " + insertService.serviceLabel());
-        int numerotationOffset = 1000000; if (nbr > 1000000) /* strange but let's accept it */ numerotationOffset = nbr;
         TransactionFactory factory = new TransactionFactory("TRANSACTION0000000");
+        logger.info("creating " + nbr + " current transactions - " + insertService.serviceLabel());
+        int numerotationOffset = 1000000; if (nbr > 1000000) /* strange but let's accept it */ numerotationOffset = nbr;
+
+        Transaction[] transactions = new Transaction[nbr];
+        for (int i = 0; i < nbr; i++) transactions[i] = factory.createTransaction(numerotationOffset + 1 + i);
+        logger.info("start writing " + nbr + " current transactions - " + insertService.serviceLabel());
 
         long start = System.currentTimeMillis();
-        insertTransactionBatch(insertService, factory, nbr, numerotationOffset);
+        for (int i = 0; i < nbr; i++) insertService.insertTransactionWithCommit(transactions[i]);
         long end = System.currentTimeMillis();
 
         logger.info("finished writing current transactions");
+
         return (end-start);
     }
-
-    /**
-     * Insert a number of transactions in the database table, using the given factory to initialize the objects with some parallelism.
-     * The access to the database is single-threaded and with commit on each row.
-     * @param insertService
-     * @param factory
-     * @param nbr number of transactions to create
-     * @param numerotationOffset used for the internal id; the first id to be inserted is numerotationOffset + 1
-     */
-    public void insertTransactionBatch(TxnInsertService insertService, TransactionFactory factory, int nbr, int numerotationOffset) {
-        ExecutorService executor = Executors.newFixedThreadPool(2);
-        // don't need a lot of threads, just to ensure the creation of objects is not on the same thread as the database access
-
-        for (int i = numerotationOffset + 1; i <= numerotationOffset + nbr; i++) {
-            final int iTxn = i; // yeah, final...
-            executor.submit(() -> {
-                Transaction transaction = factory.createTransaction(iTxn);
-                insertService.insertTransactionWithCommit(transaction); // synchronized
-            });
-        }
-        executor.shutdown();
-        try {
-            executor.awaitTermination(1, TimeUnit.DAYS); // should end way faster
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-
 
 
     /**
