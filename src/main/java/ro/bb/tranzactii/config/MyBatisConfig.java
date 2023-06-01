@@ -15,16 +15,8 @@ import javax.sql.DataSource;
 @MapperScan("ro.bb.tranzactii.repositories")
 public class MyBatisConfig {
 
-//    @ConfigurationProperties(prefix = "spring.datasource")
-//    public DataSource ds1DataSource() throws Exception {
-//        return DataSourceBuilder.create().build();
-//    }
-
-
     @Bean
-    public SqlSessionFactory sqlSessionFactory(DataSource dataSource,
-                                               @Value("mybatis.typeAliasesPackage") String typeAliasesPackage,
-                                               @Value("mybatis.mapperLocations") String mapperLocations) throws Exception {
+    public SqlSessionFactory sqlSessionFactory(DataSource dataSource) throws Exception {
         SqlSessionFactoryBean sessionFactory = new SqlSessionFactoryBean();
         sessionFactory.setDataSource(dataSource);
 
