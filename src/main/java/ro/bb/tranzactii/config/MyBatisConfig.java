@@ -28,11 +28,6 @@ public class MyBatisConfig {
         SqlSessionFactoryBean sessionFactory = new SqlSessionFactoryBean();
         sessionFactory.setDataSource(dataSource);
 
-        // The next two sentences are for *.xml files only, if the XML file is not needed for the entire
-        // persistence layer operation (only annotations will do), they are not added
-        sessionFactory.setTypeAliasesPackage("ro.bb.tranzactii.model"); //Specify base package
-        sessionFactory.setMapperLocations(new PathMatchingResourcePatternResolver().getResources("classpath:mapper/*.xml"));
-
         return sessionFactory.getObject();
     }
 

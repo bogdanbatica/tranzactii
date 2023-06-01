@@ -24,4 +24,9 @@ public class TxnOneStatementService implements TxnInsertService {
             throw new RuntimeException(e);
         }
     }
+
+    @Override
+    public String serviceLabel() {
+        return "one-statement";
+    }
 }

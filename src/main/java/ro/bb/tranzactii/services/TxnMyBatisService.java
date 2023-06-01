@@ -18,4 +18,9 @@ public class TxnMyBatisService implements TxnInsertService {
     public void insertTransactionWithCommit(Transaction transaction) {
         transactionMyBatisRepository.insert(transaction);
     }
+
+    @Override
+    public String serviceLabel() {
+        return "MyBatis";
+    }
 }

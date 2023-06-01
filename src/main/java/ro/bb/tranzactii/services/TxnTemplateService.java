@@ -18,4 +18,9 @@ public class TxnTemplateService implements TxnInsertService {
     public void insertTransactionWithCommit(Transaction transaction) {
         transactionTemplateRepository.insert(transaction);
     }
+
+    @Override
+    public String serviceLabel() {
+        return "Spring-JDBC";
+    }
 }

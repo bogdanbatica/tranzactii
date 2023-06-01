@@ -7,4 +7,6 @@ public interface TxnInsertService {
 
     @Transactional
     void insertTransactionWithCommit(Transaction transaction);
+
+    String serviceLabel();
 }
