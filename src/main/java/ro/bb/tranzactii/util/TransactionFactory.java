@@ -15,10 +15,10 @@ public class TransactionFactory {
     public static final String TEXT_CHRS = " " + UPPERCASE_LETTERS + LOWERCASE_LETTERS + DECIMAL_DIGITS;
 
     /** YYYYMMDD */
-    private String datePrefix = LocalDate.now().toString().replace("-", "");
+    private final String datePrefix = LocalDate.now().toString().replace("-", "");
 
     /** Fixed-length prefix, added to the date prefix to make a distinction between different origins of transactions */
-    private String specificIdPrefix;
+    private final String specificIdPrefix;
 
 
     public TransactionFactory(String specificIdPrefix) {
@@ -26,6 +26,8 @@ public class TransactionFactory {
     }
 
 
+    /** creates a new transaction object, with some not-so-aberrant contents in the fields.
+     * This method is thread-safe. Or if should be... Hopefully... */
     public Transaction createTransaction(long internalId) {
         Transaction txn = new Transaction();
 

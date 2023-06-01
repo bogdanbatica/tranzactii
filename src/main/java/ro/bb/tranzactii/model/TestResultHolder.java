@@ -4,7 +4,7 @@ import lombok.Getter;
 
 @Getter
 public class TestResultHolder {
-    private String serviceLabel;
+    private final String serviceLabel;
     private long minDuration = Integer.MAX_VALUE;
     private long maxDuration = -1;
     private long totalDuration = 0;

@@ -5,7 +5,6 @@ import ro.bb.tranzactii.model.Transaction;
 
 public interface TxnInsertService {
 
-    @Transactional
     void insertTransactionWithCommit(Transaction transaction);
 
     String serviceLabel();
