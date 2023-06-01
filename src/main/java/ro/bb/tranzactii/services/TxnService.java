@@ -9,12 +9,10 @@ import ro.bb.tranzactii.repositories.CommonTxnRepository;
 import ro.bb.tranzactii.util.Time;
 import ro.bb.tranzactii.util.TransactionFactory;
 
-import java.sql.SQLException;
-
 @Service
 public class TxnService {
 
-    private static Logger logger = LoggerFactory.getLogger(TxnService.class);
+    private final static Logger logger = LoggerFactory.getLogger(TxnService.class);
 
     @Autowired
     private CommonTxnRepository commonTxnRepository;
@@ -23,49 +21,51 @@ public class TxnService {
     private TxnTemplateService txnTemplateService;
 
     @Autowired
+    private TxnMyBatisService txnMyBatisService;
+
+    @Autowired
     private TxnOneStatementService txnOneStatementService;
 
 
-    public void prepareInitialContents() {
-        logger.info("start initializing contents");
+    public String testJdbcTemplate() {
+        prepareInitialContents(txnTemplateService);
+        return testInsert(txnTemplateService);
+    }
+
+    public String testMyBatis() {
+        prepareInitialContents(txnMyBatisService);
+        return testInsert(txnMyBatisService);
+    }
+
+    public String testOneStatement() {
+        prepareInitialContents(txnOneStatementService);
+        return testInsert(txnOneStatementService);
+    }
+
+    public void prepareInitialContents(TxnInsertService insertService) {
+        logger.info("start initializing contents - " + insertService.getClass().getSimpleName());
         commonTxnRepository.deleteAll();
         TransactionFactory factory = new TransactionFactory("EXISTING0000000000");
 
         for (int i = 1; i <= 10000; i++) {
             Transaction transaction = factory.createTransaction(i);
-            txnTemplateService.insertTransactionWithCommit(transaction);
+            insertService.insertTransactionWithCommit(transaction);
         }
         logger.info("finished initializing contents");
 
         Time.waitMillis(1000);
     }
 
-    public String testJdbcTemplate() {
-        prepareInitialContents();
-
+    public String testInsert(TxnInsertService insertService) {
         TransactionFactory factory = new TransactionFactory("TRANSACTION0000000");
-        logger.info("start writing current transactions");
+        logger.info("start writing current transactions - " + insertService.getClass().getSimpleName());
         long start = System.currentTimeMillis();
+
         for (int i = 1000001; i < 1010000; i++) {
             Transaction transaction = factory.createTransaction(i);
-            txnTemplateService.insertTransactionWithCommit(transaction);
+            insertService.insertTransactionWithCommit(transaction);
         }
-        long end = System.currentTimeMillis();
-        logger.info("finished writing current transactions");
 
-        return "Generation took " + (end-start) + " ms";
-    }
-
-    public String testOneStatement() {
-        prepareInitialContents();
-
-        TransactionFactory factory = new TransactionFactory("TRANSACTION0000000");
-        logger.info("start writing current transactions");
-        long start = System.currentTimeMillis();
-        for (int i = 1000001; i < 1010000; i++) {
-            Transaction transaction = factory.createTransaction(i);
-            txnOneStatementService.insertTransactionWithCommit(transaction);
-        }
         long end = System.currentTimeMillis();
         logger.info("finished writing current transactions");
 

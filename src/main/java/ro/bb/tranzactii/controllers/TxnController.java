@@ -18,6 +18,11 @@ public class TxnController {
         return txnService.testJdbcTemplate();
     }
 
+    @GetMapping("/mybatis")
+    public String testMyBatis() {
+        return txnService.testMyBatis();
+    }
+
     @GetMapping("/onestmt")
     public String testOneStatement() {
         return txnService.testOneStatement();

@@ -4,18 +4,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ro.bb.tranzactii.model.Transaction;
-import ro.bb.tranzactii.repositories.TransactionTemplateRepository;
+import ro.bb.tranzactii.repositories.TransactionMyBatisRepository;
 
 @Service
-public class TxnTemplateService implements TxnInsertService {
+public class TxnMyBatisService implements TxnInsertService {
 
     @Autowired
-    private TransactionTemplateRepository transactionTemplateRepository;
+    private TransactionMyBatisRepository transactionMyBatisRepository;
 
 
     @Override
     @Transactional
     public void insertTransactionWithCommit(Transaction transaction) {
-        transactionTemplateRepository.insert(transaction);
+        transactionMyBatisRepository.insert(transaction);
     }
 }
