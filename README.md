@@ -22,7 +22,7 @@ Endpoints:
 - variant 3:  /mybatis?size={N}
 - comparison between the three variants: /compare?size={N}&runs={number of runs}
 
-Material:
+Material used in the tests:
 - Database server: Oracle XE (limited to using 2 CPU from the 1.8 GHz processor, 2 GB of RAM and 12 GB of disk space)
 - Application server: Ryzen 5700U (8 cores, 16 threads, 1.8 GHz base frequency), 32 GB RAM. Not that I needed all that...
 - Bandwith between the two: 100 Mbps in a local network
