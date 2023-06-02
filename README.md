@@ -16,12 +16,16 @@ Test process:
 The contents of the rows to insert is generated ad-hoc, randomly.
 All the access to the database is done in a single thread.
 
+Endpoints:
+- variant 1: /onestmt?size={N}
+- variant 2:  /template?size={N}  
+- variant 3:  /mybatis?size={N}
+- comparison between the three variants: /compare?size={N}&runs={number of runs}
 
 Material:
 - Database server: Oracle XE (limited to using 2 CPU from the 1.8 GHz processor, 2 GB of RAM and 12 GB of disk space)
 - Application server: Ryzen 5700U (8 cores, 16 threads, 1.8 GHz base frequency), 32 GB RAM. Not that I needed all that...
 - Bandwith between the two: 100 Mbps in a local network
-
 
 Results of 10 runs with N = 10000 rows:
 - one-statement: average duration 31.913 seconds, minimum 31.204, maximum 32.654
