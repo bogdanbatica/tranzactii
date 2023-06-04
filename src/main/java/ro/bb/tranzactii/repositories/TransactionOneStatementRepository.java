@@ -1,6 +1,7 @@
 package ro.bb.tranzactii.repositories;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 import ro.bb.tranzactii.model.Transaction;
 
@@ -269,6 +270,11 @@ public class TransactionOneStatementRepository {
     @Autowired
     public TransactionOneStatementRepository(DataSource dataSource) {
         this.dataSource = dataSource;
+    }
+
+
+    public void prepareStatement() {
+        if (preparedStatement != null) return; // already done
         try {
             Connection connection = dataSource.getConnection();
             preparedStatement = connection.prepareStatement(INSERT_TRANSACTION_SQL);
@@ -295,6 +301,8 @@ public class TransactionOneStatementRepository {
         paramMap.put("operationTmstmp", txn.operationTmstmp);
         paramMap.put("additionalInfo", txn.additionalInfo);
         */
+        prepareStatement();
+
         int iParam = 0;
         preparedStatement.setLong(++iParam, txn.localId);
         preparedStatement.setString(++iParam, txn.transactionId);
