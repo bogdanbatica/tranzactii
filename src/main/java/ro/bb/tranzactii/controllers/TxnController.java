@@ -37,11 +37,17 @@ public class TxnController {
         return txnService.testJdbcTemplate1(parseSizeParameter(size));
     }
 
-    @GetMapping("/compare")
-    public String comparativeTest(@RequestParam("size") String size, @RequestParam("runs") String runs) {
-        return txnService.comparativeTest(parseSizeParameter(size), parseRunsParameter(runs));
+    @GetMapping("/compare1")
+    public String comparativeTest1(@RequestParam("size") String size, @RequestParam("runs") String runs) {
+        return txnService.testBare1stmtTemplateMybatis(
+                parseSizeParameter(size), parseRunsParameter(runs));
     }
 
+    @GetMapping("/compare")
+    public String comparativeTest(@RequestParam("size") String size, @RequestParam("runs") String runs) {
+        return txnService.testTemplate1stmtVsDefault(
+                parseSizeParameter(size), parseRunsParameter(runs));
+    }
 
     private int parseSizeParameter(String sizeParameter) {
         int nbTxn;

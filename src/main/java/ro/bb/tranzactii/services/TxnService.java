@@ -87,15 +87,37 @@ public class TxnService {
         return (end-start);
     }
 
-
     /**
      * Compare the inserts using "one statement", Spring JDBC, and MyBatis
      * @param size size of the transactions batch to measure (same size will be used for the initial contents of the table)
      * @param runs number of times the test is run (for each access mode)
      * @return the recap of the test results in a readable format
      */
-    public String comparativeTest(int size, int runs) {
-        TxnInsertService[] insertServices = {txnOneStatementService, txnTemplateService, txnMyBatisService};
+    public String testBare1stmtTemplateMybatis(int size, int runs) {
+        return comparativeTest(size, runs, txnOneStatementService, txnTemplateService, txnMyBatisService);
+    }
+
+    /**
+     * Compare the inserts using
+     *  "one statement" Spring JDBC with JdbcTemplate
+     *   vs default Spring JDBC with NamedParameterJdbcTemplate,
+     * Hikari data sources
+     * @param size size of the transactions batch to measure (same size will be used for the initial contents of the table)
+     * @param runs number of times the test is run (for each access mode)
+     * @return the recap of the test results in a readable format
+     */
+    public String testTemplate1stmtVsDefault(int size, int runs) {
+        return comparativeTest(size, runs, txnTemplateOneStatementService, txnTemplateService);
+    }
+
+    /**
+     * Compare the inserts using different services
+     * @param size size of the transactions batch to measure (same size will be used for the initial contents of the table)
+     * @param runs number of times the test is run (for each access mode)
+     * @param insertServices services to use
+     * @return the recap of the test results in a readable format
+     */
+    public String comparativeTest(int size, int runs, TxnInsertService... insertServices) {
         int nServices = insertServices.length;
         TestResultHolder[] resultHolders = new TestResultHolder[nServices];
         for (int iSrv = 0; iSrv < nServices; iSrv++) resultHolders[iSrv] = new TestResultHolder(insertServices[iSrv].serviceLabel());

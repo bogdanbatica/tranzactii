@@ -29,8 +29,8 @@ public class JoacaDataSource {
 
     @PostConstruct
     void ceAvemNoiAici() throws Exception {
-        Map<String, DataSource> dataSourceBeans = context.getBeansOfType(DataSource.class);
-        dataSourceBeans.values().forEach(System.out::println);
+//        Map<String, DataSource> dataSourceBeans = context.getBeansOfType(DataSource.class);
+//        dataSourceBeans.values().forEach(System.out::println);
 
         /* finish the initialisation of the data sources */
         dataSource.getConnection();
