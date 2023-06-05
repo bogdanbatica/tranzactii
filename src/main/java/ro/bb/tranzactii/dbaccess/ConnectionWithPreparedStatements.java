@@ -45,6 +45,14 @@ public abstract class ConnectionWithPreparedStatements implements Connection {
         reusableStatement = new UnclosablePreparedStatement(preparedStatement);
     }
 
+    @Override
+    public void close() throws SQLException {
+        try { // closing the connection should take care of the associated Statement-s, but the urban legends say otherwise...
+            reusableStatement.close();
+        } catch (Exception e) {/* at least we've tried... */}
+        internalConnection.close();
+    }
+
     public PreparedStatement getReusableStatement() {
         return reusableStatement;
     }
@@ -55,11 +63,6 @@ public abstract class ConnectionWithPreparedStatements implements Connection {
     @Override
     public void clearWarnings() throws SQLException {
         internalConnection.clearWarnings();
-    }
-
-    @Override
-    public void close() throws SQLException {
-        internalConnection.close();
     }
 
     @Override

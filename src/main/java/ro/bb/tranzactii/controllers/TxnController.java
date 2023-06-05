@@ -45,7 +45,7 @@ public class TxnController {
 
     @GetMapping("/compare")
     public String comparativeTest(@RequestParam("size") String size, @RequestParam("runs") String runs) {
-        return txnService.testTemplate1stmtVsDefault(
+        return txnService.testTemplate1stmtVsTemplatedefaultVsMybatis(
                 parseSizeParameter(size), parseRunsParameter(runs));
     }
 

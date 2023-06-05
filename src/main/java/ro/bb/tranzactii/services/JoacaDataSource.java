@@ -29,8 +29,8 @@ public class JoacaDataSource {
 
     @PostConstruct
     void ceAvemNoiAici() throws Exception {
-//        Map<String, DataSource> dataSourceBeans = context.getBeansOfType(DataSource.class);
-//        dataSourceBeans.values().forEach(System.out::println);
+        Map<String, DataSource> dataSourceBeans = context.getBeansOfType(DataSource.class);
+        dataSourceBeans.forEach((k, v) -> System.out.println(k + ": " + v.getClass().getCanonicalName()));
 
         /* finish the initialisation of the data sources */
         dataSource.getConnection();
@@ -38,11 +38,11 @@ public class JoacaDataSource {
 
         HikariPool pool = (HikariPool) dataSource.getHikariPoolMXBean();
         DataSource unwrappedDataSource = pool.getUnwrappedDataSource();
-        System.out.println(unwrappedDataSource.getClass().getCanonicalName());
+        System.out.println("dataSource unwrapped -> " + unwrappedDataSource.getClass().getCanonicalName());
 
         pool = (HikariPool) reuseStmtDataSource.getHikariPoolMXBean();
         unwrappedDataSource = pool.getUnwrappedDataSource();
-        System.out.println(unwrappedDataSource.getClass().getCanonicalName());
+        System.out.println("reuseStmtDataSource unwrapped -> " + unwrappedDataSource.getClass().getCanonicalName());
     }
 
 }

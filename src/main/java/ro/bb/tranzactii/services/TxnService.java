@@ -140,6 +140,19 @@ public class TxnService {
     }
 
     /**
+     * Compare the inserts using
+     *  "one statement" Spring JDBC with JdbcTemplate
+     *   vs default Spring JDBC with NamedParameterJdbcTemplate,
+     * Hikari data sources
+     * @param size size of the transactions batch to measure (same size will be used for the initial contents of the table)
+     * @param runs number of times the test is run (for each access mode)
+     * @return the recap of the test results in a readable format
+     */
+    public String testTemplate1stmtVsTemplatedefaultVsMybatis(int size, int runs) {
+        return comparativeTest(size, runs, txnTemplateOneStatementService, txnTemplateService, txnMyBatisService);
+    }
+
+    /**
      * Compare the inserts using different services
      * @param size size of the transactions batch to measure (same size will be used for the initial contents of the table)
      * @param runs number of times the test is run (for each access mode)
