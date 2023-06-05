@@ -20,8 +20,10 @@ public class TxnTemplateOneStatementService implements TxnInsertService {
     public void insertTransactionWithCommit(Transaction transaction) {
         try {
             repository.insert(transaction);
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+        } catch (SQLException e) { // shoudn't happen, but practically it did, let's halt right now to investigate
+            e.printStackTrace();
+            System.out.println(transaction);
+            System.exit(1);
         }
     }
 

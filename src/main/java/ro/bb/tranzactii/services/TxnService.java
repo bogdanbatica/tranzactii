@@ -10,12 +10,19 @@ import ro.bb.tranzactii.repositories.CommonTxnRepository;
 import ro.bb.tranzactii.util.Time;
 import ro.bb.tranzactii.util.TransactionFactory;
 
-import java.util.TreeMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class TxnService {
 
     private final static Logger logger = LoggerFactory.getLogger(TxnService.class);
+
+    /** Numpber of threads we use in parallel to write the transactions.
+     * Value chosen so to exceed the multithreading capabiities of the database,
+     * but not to hinder the functioning of the Java application */
+    static int THREAD_POOL_SIZE = 3;
 
     @Autowired
     private CommonTxnRepository commonTxnRepository;
@@ -60,10 +67,10 @@ public class TxnService {
         commonTxnRepository.deleteAll();
         TransactionFactory factory = new TransactionFactory("EXISTING0000000000");
 
-        for (int i = 1; i <= nbr; i++) {
-            Transaction transaction = factory.createTransaction(i);
-            insertService.insertTransactionWithCommit(transaction);
-        }
+        Transaction[] transactions = new Transaction[nbr];
+        for (int i = 0; i < nbr; i++) transactions[i] = factory.createTransaction(1 + i);
+        insertTransactionBatch(insertService, transactions);
+
         logger.info("finished initializing contents");
 
         Time.waitMillis(1000);
@@ -79,13 +86,35 @@ public class TxnService {
         logger.info("start writing " + nbr + " current transactions - " + insertService.serviceLabel());
 
         long start = System.currentTimeMillis();
-        for (int i = 0; i < nbr; i++) insertService.insertTransactionWithCommit(transactions[i]);
+        insertTransactionBatch(insertService, transactions);
         long end = System.currentTimeMillis();
 
         logger.info("finished writing current transactions");
 
         return (end-start);
     }
+
+    /**
+     * Insert a number of transactions in the database table, using a thread pool
+     */
+    public void insertTransactionBatch(TxnInsertService insertService, Transaction[] transactions) {
+        ExecutorService executor = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
+
+        for (Transaction transaction : transactions) {
+            executor.execute(() ->
+                insertService.insertTransactionWithCommit(transaction)
+            );
+        }
+        executor.shutdown();
+        try {
+            executor.awaitTermination(1, TimeUnit.DAYS); // should end way faster
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
+
 
     /**
      * Compare the inserts using "one statement", Spring JDBC, and MyBatis
@@ -107,7 +136,7 @@ public class TxnService {
      * @return the recap of the test results in a readable format
      */
     public String testTemplate1stmtVsDefault(int size, int runs) {
-        return comparativeTest(size, runs, txnTemplateOneStatementService, txnTemplateService);
+        return comparativeTest(size, runs, txnTemplateService, txnTemplateOneStatementService);
     }
 
     /**

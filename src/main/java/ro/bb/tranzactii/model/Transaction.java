@@ -134,4 +134,8 @@ public class Transaction {
     public String additionalInfo  ;
 
 
+    @Override
+    public String toString() {
+        return "Transaction " + transactionId + " (localId=" + localId + ", checksum " + checksum +")";
+    }
 }
