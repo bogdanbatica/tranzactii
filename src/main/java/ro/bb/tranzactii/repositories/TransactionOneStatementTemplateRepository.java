@@ -1,8 +1,14 @@
 package ro.bb.tranzactii.repositories;
 
+import com.zaxxer.hikari.pool.HikariProxyConnection;
+import com.zaxxer.hikari.pool.ProxyConnection;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+import ro.bb.tranzactii.dbaccess.TxnConnectionWithPreparedStatements;
 import ro.bb.tranzactii.model.Transaction;
+import ro.bb.tranzactii.util.HikariDelegateFinder;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -10,281 +16,32 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
 @Repository
-public class TransactionOneStatementRepository {
+public class TransactionOneStatementTemplateRepository {
 
-    public static final String INSERT_TRANSACTION_SQL = """
-            INSERT INTO tranzactii
-            ( local_id
-            , transaction_id
-            , checksum
-            , debtor_acct1
-            , debtor_acct2
-            , debtor_acct3
-            , debtor_acct4
-            , creditor_acct1
-            , creditor_acct2
-            , creditor_acct3
-            , creditor_acct4
-            , amount
-            , numeric01
-            , numeric02
-            , numeric03
-            , numeric04
-            , numeric05
-            , numeric06
-            , numeric07
-            , numeric08
-            , numeric09
-            , numeric10
-            , numeric11
-            , numeric12
-            , numeric13
-            , numeric14
-            , numeric15
-            , numeric16
-            , numeric17
-            , numeric18
-            , numeric19
-            , numeric20
-            , numeric21
-            , numeric22
-            , numeric23
-            , numeric24
-            , numeric25
-            , numeric26
-            , numeric27
-            , numeric28
-            , numeric29
-            , numeric30
-            , numeric31
-            , numeric32
-            , numeric33
-            , numeric34
-            , numeric35
-            , numeric36
-            , numeric37
-            , numeric38
-            , numeric39
-            , numeric40
-            , numeric41
-            , numeric42
-            , numeric43
-            , numeric44
-            , numeric45
-            , numeric46
-            , numeric47
-            , numeric48
-            , numeric49
-            , numeric50
-            , numeric51
-            , numeric52
-            , numeric53
-            , numeric54
-            , alphanr01
-            , alphanr02
-            , alphanr03
-            , alphanr04
-            , alphanr05
-            , alphanr06
-            , alphanr07
-            , alphanr08
-            , alphanr09
-            , alphanr10
-            , alphanr11
-            , alphanr12
-            , alphanr13
-            , alphanr14
-            , alphanr15
-            , alphanr16
-            , alphanr17
-            , alphanr18
-            , alphanr19
-            , alphanr20
-            , alphanr21
-            , alphanr22
-            , alphanr23
-            , alphanr24
-            , alphanr25
-            , alphanr26
-            , alphanr27
-            , alphanr28
-            , alphanr29
-            , alphanr30
-            , alphanr31
-            , alphanr32
-            , alphanr33
-            , alphanr34
-            , alphanr35
-            , alphanr36
-            , alphanr37
-            , alphanr38
-            , alphanr39
-            , alphanr40
-            , alphanr41
-            , alphanr42
-            , alphanr43
-            , alphanr44
-            , alphanr45
-            , alphanr46
-            , alphanr47
-            , alphanr48
-            , alphanr49
-            , alphanr50
-            , alphanr51
-            , alphanr52
-            , alphanr53
-            , alphanr54
-            , operation_tmstmp
-            , additional_info
-            )
-            VALUES
-            ( ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            , ?
-            )
-                        """;
+    private static final String INSERT_TRANSACTION_SQL = TransactionOneStatementRepository.INSERT_TRANSACTION_SQL;
 
-    DataSource dataSource;
-    PreparedStatement preparedStatement;
+    private JdbcTemplate jdbcTemplate;
 
-    @Autowired
-    public TransactionOneStatementRepository(DataSource dataSource) {
-        this.dataSource = dataSource;
-    }
-
-
-    public void prepareStatement() {
-        if (preparedStatement != null) return; // already done
-        try {
-            Connection connection = dataSource.getConnection();
-            preparedStatement = connection.prepareStatement(INSERT_TRANSACTION_SQL);
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
+    public TransactionOneStatementTemplateRepository(@Qualifier("reuseStmtDataSource") DataSource dataSource) {
+        this.jdbcTemplate = new JdbcTemplate(dataSource);
     }
 
     public void insert(Transaction txn) throws SQLException {
-        prepareStatement();
+        jdbcTemplate.update(con -> {
+            TxnConnectionWithPreparedStatements delegateConnection
+                    = (TxnConnectionWithPreparedStatements) HikariDelegateFinder.extractDelegate((ProxyConnection) con);
+            PreparedStatement preparedStatement = delegateConnection.getReusableStatement();
+            try {
+                setParameters(preparedStatement, txn);
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+            return preparedStatement;
+        });
+    }
 
+
+    private void setParameters(PreparedStatement preparedStatement, Transaction txn) throws SQLException {
         int iParam = 0;
         preparedStatement.setLong(++iParam, txn.localId);
         preparedStatement.setString(++iParam, txn.transactionId);
@@ -409,6 +166,5 @@ public class TransactionOneStatementRepository {
         //preparedStatement.setTimestamp(13, new Timestamp(txn.operationTmstmp.toInstant().toEpochMilli()));
         preparedStatement.setObject(++iParam, txn.operationTmstmp);  // s-o descurca?
         preparedStatement.setString(++iParam, txn.additionalInfo);
-        preparedStatement.executeUpdate();
     }
 }

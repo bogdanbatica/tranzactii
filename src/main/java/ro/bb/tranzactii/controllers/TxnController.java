@@ -32,6 +32,11 @@ public class TxnController {
         return txnService.testOneStatement(parseSizeParameter(size));
     }
 
+    @GetMapping("/template1")
+    public String testJdbcTemplate1(@RequestParam("size") String size) {
+        return txnService.testJdbcTemplate1(parseSizeParameter(size));
+    }
+
     @GetMapping("/compare")
     public String comparativeTest(@RequestParam("size") String size, @RequestParam("runs") String runs) {
         return txnService.comparativeTest(parseSizeParameter(size), parseRunsParameter(runs));

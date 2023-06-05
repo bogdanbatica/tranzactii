@@ -6,19 +6,22 @@ import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
-import java.util.Enumeration;
 import java.util.Properties;
 import javax.sql.DataSource;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import ro.bb.tranzactii.repositories.TransactionOneStatementRepository;
 
 /**
- * This class is meant to be used om a Hikari pool, instead of Hikari's DriverDataSource.
+ * This class is meant to be used in a Hikari pool, instead of Hikari's DriverDataSource.
  * Hence, heavily inspired from that DriverDataSource
  */
-public class StatementAwareDataSource implements DataSource {
-    private static final Logger LOGGER = LoggerFactory.getLogger(StatementAwareDataSource.class);
+public class TxnStatementAwareDataSource implements DataSource {
+    private static final Logger LOGGER = LoggerFactory.getLogger(TxnStatementAwareDataSource.class);
+
+    /** until we decide where to keep the SQL statements... */
+    private static final String INSERT_TRANSACTION_SQL = TransactionOneStatementRepository.INSERT_TRANSACTION_SQL;
 
     private final String jdbcUrl;
 
@@ -26,7 +29,7 @@ public class StatementAwareDataSource implements DataSource {
     private final Properties driverProperties;
     private Driver driver;
 
-    public StatementAwareDataSource(String jdbcUrl, String username, String password) {
+    public TxnStatementAwareDataSource(String jdbcUrl, String username, String password) {
         this.jdbcUrl = jdbcUrl;
         this.driverProperties = new Properties();
 //        for (Map.Entry<Object, Object> entry : properties.entrySet()) {
@@ -88,7 +91,6 @@ public class StatementAwareDataSource implements DataSource {
 //            } else if (!this.driver.acceptsURL(jdbcUrl)) {
 //                throw new RuntimeException("Driver " + driverClassName + " claims to not accept jdbcUrl, " + sanitizedUrl);
             }
-
         } catch (SQLException var10) {
             throw new RuntimeException("Failed to get driver instance for jdbcUrl=" + sanitizedUrl, var10);
         }
@@ -96,23 +98,25 @@ public class StatementAwareDataSource implements DataSource {
 
 
     public Connection getConnection() throws SQLException {
-        return this.driver.connect(this.jdbcUrl, this.driverProperties);
+        Connection connection = this.driver.connect(this.jdbcUrl, this.driverProperties);
+        return new TxnConnectionWithPreparedStatements(connection);
     }
 
     public Connection getConnection(String username, String password) throws SQLException {
-        Properties cloned = (Properties)this.driverProperties.clone();
+        Properties clonedProperties = (Properties)this.driverProperties.clone();
+
         if (username != null) {
-            cloned.put("user", username);
-            if (cloned.containsKey("username")) {
-                cloned.put("username", username);
+            clonedProperties.put("user", username);
+            if (clonedProperties.containsKey("username")) {
+                clonedProperties.put("username", username);
             }
         }
-
         if (password != null) {
-            cloned.put("password", password);
+            clonedProperties.put("password", password);
         }
 
-        return this.driver.connect(this.jdbcUrl, cloned);
+        Connection connection = this.driver.connect(this.jdbcUrl, clonedProperties);
+        return new TxnConnectionWithPreparedStatements(connection);
     }
 
     public PrintWriter getLogWriter() throws SQLException {

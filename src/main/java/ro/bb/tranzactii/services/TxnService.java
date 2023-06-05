@@ -29,6 +29,9 @@ public class TxnService {
     @Autowired
     private TxnOneStatementService txnOneStatementService;
 
+    @Autowired
+    private TxnTemplateOneStatementService txnTemplateOneStatementService;
+
 
     public String testJdbcTemplate(int batchSize) {
         return testService(txnTemplateService, batchSize);
@@ -40,6 +43,10 @@ public class TxnService {
 
     public String testOneStatement(int batchSize) {
         return testService(txnOneStatementService, batchSize);
+    }
+
+    public String testJdbcTemplate1(int batchSize) {
+        return testService(txnTemplateOneStatementService, batchSize);
     }
 
     public String testService(TxnInsertService insertService, int batchSize) {
