@@ -35,7 +35,7 @@ public abstract class ConnectionWithPreparedStatements implements Connection {
 
     protected String reusableStatementSql;
     private final Connection internalConnection;
-    private final PreparedStatement reusableStatement;
+    private final UnclosablePreparedStatement reusableStatement;
 
 
     public ConnectionWithPreparedStatements(Connection internalConnection) throws SQLException {
@@ -47,9 +47,8 @@ public abstract class ConnectionWithPreparedStatements implements Connection {
 
     @Override
     public void close() throws SQLException {
-        try { // closing the connection should take care of the associated Statement-s, but the urban legends say otherwise...
-            reusableStatement.close();
-        } catch (Exception e) {/* at least we've tried... */}
+        // closing the connection should take care of the associated Statement-s, but the urban legends say otherwise...
+        reusableStatement.closeTheUnclosable();
         internalConnection.close();
     }
 

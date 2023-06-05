@@ -4,7 +4,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
-import org.springframework.transaction.annotation.Transactional;
 import ro.bb.tranzactii.model.Transaction;
 
 import javax.sql.DataSource;
@@ -269,7 +268,7 @@ public class TransactionTemplateRepository {
     NamedParameterJdbcTemplate template;
 
     @Autowired
-    public TransactionTemplateRepository(@Qualifier("dbcp2DataSource") DataSource dataSource) {
+    public TransactionTemplateRepository(@Qualifier("dataSource") DataSource dataSource) {
         this.dataSource = dataSource;
         template = new NamedParameterJdbcTemplate(dataSource);
     }
