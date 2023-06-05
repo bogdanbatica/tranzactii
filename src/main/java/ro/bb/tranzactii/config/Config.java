@@ -2,6 +2,7 @@ package ro.bb.tranzactii.config;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import org.apache.commons.dbcp2.BasicDataSource;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -40,6 +41,11 @@ public class Config {
         return properties.initializeDataSourceBuilder().type(HikariDataSource.class).build();
     }
 
+    @Bean
+    @Qualifier("dbcp2DataSource")
+    public BasicDataSource dbcp2DataSource(@Qualifier("normalDataSourceProperties") DataSourceProperties properties) {
+        return properties.initializeDataSourceBuilder().type(BasicDataSource.class).build();
+    }
 
     @Bean
     public TransactionFactory alreadyExistingTransactionFactory() {

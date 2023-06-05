@@ -1,5 +1,6 @@
 package ro.bb.tranzactii.services;
 
+import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +11,8 @@ import ro.bb.tranzactii.repositories.CommonTxnRepository;
 import ro.bb.tranzactii.util.Time;
 import ro.bb.tranzactii.util.TransactionFactory;
 
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -22,7 +25,7 @@ public class TxnService {
     /** Numpber of threads we use in parallel to write the transactions.
      * Value chosen so to exceed the multithreading capabiities of the database,
      * but not to hinder the functioning of the Java application */
-    static int THREAD_POOL_SIZE = 3;
+    public static int DEFAULT_THREAD_POOL_SIZE = 3;
 
     @Autowired
     private CommonTxnRepository commonTxnRepository;
@@ -39,6 +42,33 @@ public class TxnService {
     @Autowired
     private TxnTemplateOneStatementService txnTemplateOneStatementService;
 
+    /** Regroups, for easy reference, all the modalities we have to write our transactions */
+    public Map<Character, TxnInsertService> insertServiceMap;
+
+    @PostConstruct
+    public void creareServiceMap() {
+        insertServiceMap = new TreeMap<>();
+
+        /* "default behaviour" services */
+        insertServiceMap.put('A', txnTemplateService);
+        insertServiceMap.put('B', txnMyBatisService);
+
+        /* one-statement services */
+        insertServiceMap.put('Z', txnOneStatementService);
+        insertServiceMap.put('Y', txnTemplateOneStatementService);
+    }
+
+    public String formatServiceMap() {
+        StringBuilder sb = new StringBuilder(255);
+        insertServiceMap.forEach((k, v) -> {
+            sb.append(k).append(": ").append(v.serviceLabel())
+                    .append(", &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;class ")
+                    .append(v.getClass().getSimpleName()).append("<br>");
+        });
+        return sb.toString();
+    }
+
+    /* simple duration tests */
 
     public String testJdbcTemplate(int batchSize) {
         return testService(txnTemplateService, batchSize);
@@ -57,64 +87,23 @@ public class TxnService {
     }
 
     public String testService(TxnInsertService insertService, int batchSize) {
-        prepareInitialContents(insertService, batchSize);
-        long duration = testInsert(insertService, batchSize);
+        prepareInitialContents(insertService, batchSize, DEFAULT_THREAD_POOL_SIZE);
+        long duration = testInsert(insertService, batchSize, DEFAULT_THREAD_POOL_SIZE);
         return "Generation took " + duration + " ms";
     }
 
-    public void prepareInitialContents(TxnInsertService insertService, int nbr) {
-        logger.info("start initializing contents with " + nbr + " transactions - " + insertService.serviceLabel());
-        commonTxnRepository.deleteAll();
-        TransactionFactory factory = new TransactionFactory("EXISTING0000000000");
+    /** Single run test on a service identified by its service key */
+    public String testService(char serviceKey, int batchSize, int threads) {
+        TxnInsertService insertService = insertServiceMap.get(serviceKey);
+        if (insertService == null) return "ERROR: Unknown service key " + serviceKey;
 
-        Transaction[] transactions = new Transaction[nbr];
-        for (int i = 0; i < nbr; i++) transactions[i] = factory.createTransaction(1 + i);
-        insertTransactionBatch(insertService, transactions);
-
-        logger.info("finished initializing contents");
-
-        Time.waitMillis(1000);
-    }
-
-    public long testInsert(TxnInsertService insertService, int nbr) {
-        TransactionFactory factory = new TransactionFactory("TRANSACTION0000000");
-        logger.info("creating " + nbr + " current transactions - " + insertService.serviceLabel());
-        int numerotationOffset = 1000000; if (nbr > 1000000) /* strange but let's accept it */ numerotationOffset = nbr;
-
-        Transaction[] transactions = new Transaction[nbr];
-        for (int i = 0; i < nbr; i++) transactions[i] = factory.createTransaction(numerotationOffset + 1 + i);
-        logger.info("start writing " + nbr + " current transactions - " + insertService.serviceLabel());
-
-        long start = System.currentTimeMillis();
-        insertTransactionBatch(insertService, transactions);
-        long end = System.currentTimeMillis();
-
-        logger.info("finished writing current transactions");
-
-        return (end-start);
-    }
-
-    /**
-     * Insert a number of transactions in the database table, using a thread pool
-     */
-    public void insertTransactionBatch(TxnInsertService insertService, Transaction[] transactions) {
-        ExecutorService executor = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
-
-        for (Transaction transaction : transactions) {
-            executor.execute(() ->
-                insertService.insertTransactionWithCommit(transaction)
-            );
-        }
-        executor.shutdown();
-        try {
-            executor.awaitTermination(1, TimeUnit.DAYS); // should end way faster
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
+        prepareInitialContents(insertService, batchSize, threads);
+        long duration = testInsert(insertService, batchSize, threads);
+        return insertService.serviceLabel() + " " + batchSize + " rows " + threads + " threads.  Generation took " + duration + " ms";
     }
 
 
-
+    /* particular comparative tests */
 
     /**
      * Compare the inserts using "one statement", Spring JDBC, and MyBatis
@@ -123,7 +112,7 @@ public class TxnService {
      * @return the recap of the test results in a readable format
      */
     public String testBare1stmtTemplateMybatis(int size, int runs) {
-        return comparativeTest(size, runs, txnOneStatementService, txnTemplateService, txnMyBatisService);
+        return comparativeTest(size, runs, DEFAULT_THREAD_POOL_SIZE, txnOneStatementService, txnTemplateService, txnMyBatisService);
     }
 
     /**
@@ -136,7 +125,7 @@ public class TxnService {
      * @return the recap of the test results in a readable format
      */
     public String testTemplate1stmtVsDefault(int size, int runs) {
-        return comparativeTest(size, runs, txnTemplateService, txnTemplateOneStatementService);
+        return comparativeTest(size, runs, DEFAULT_THREAD_POOL_SIZE, txnTemplateService, txnTemplateOneStatementService);
     }
 
     /**
@@ -149,17 +138,39 @@ public class TxnService {
      * @return the recap of the test results in a readable format
      */
     public String testTemplate1stmtVsTemplatedefaultVsMybatis(int size, int runs) {
-        return comparativeTest(size, runs, txnTemplateOneStatementService, txnTemplateService, txnMyBatisService);
+        return comparativeTest(size, runs, DEFAULT_THREAD_POOL_SIZE, txnTemplateOneStatementService, txnTemplateService, txnMyBatisService);
     }
+
+
+    /**
+     * A more general comparative test on the inserts using different services
+     * @param size size of the transactions batch to measure (same size will be used for the initial contents of the table)
+     * @param runs number of times the test is run (for each access mode)
+     * @param threads number of parallel threads we run a test on
+     * @param serviceKeys a "word" containing one letter per service, according to the insertServicesMap
+     * @return the recap of the test results in a readable format
+     */
+    public String comparativeTest(int size, int runs, int threads, String serviceKeys) {
+        TxnInsertService[] insertServices = new TxnInsertService[serviceKeys.length()];
+        for (int iS = 0; iS < insertServices.length; iS++) {
+            TxnInsertService service = insertServiceMap.get(serviceKeys.charAt(iS));
+            if (service == null) return "ERROR: Unknown service key " + serviceKeys.charAt(iS);
+            insertServices[iS] = service;
+        }
+        return formatOutputHeader(size, runs, threads, serviceKeys)
+                + comparativeTest(size, runs, threads, insertServices);
+    }
+
 
     /**
      * Compare the inserts using different services
      * @param size size of the transactions batch to measure (same size will be used for the initial contents of the table)
      * @param runs number of times the test is run (for each access mode)
+     * @param threads number of parallel threads we run a test on
      * @param insertServices services to use
      * @return the recap of the test results in a readable format
      */
-    public String comparativeTest(int size, int runs, TxnInsertService... insertServices) {
+    public String comparativeTest(int size, int runs, int threads, TxnInsertService... insertServices) {
         int nServices = insertServices.length;
         TestResultHolder[] resultHolders = new TestResultHolder[nServices];
         for (int iSrv = 0; iSrv < nServices; iSrv++) resultHolders[iSrv] = new TestResultHolder(insertServices[iSrv].serviceLabel());
@@ -167,21 +178,83 @@ public class TxnService {
         /* first, one warm-up run */
         logger.info("Warming up...");
         for (TxnInsertService insertService : insertServices) {
-            prepareInitialContents(insertService, size);
-            testInsert(insertService, size);
+            prepareInitialContents(insertService, size, threads);
+            testInsert(insertService, size, threads);
         }
         /* then, the runs to be measured */
         for (int iRun = 0; iRun < runs; iRun++) {
             logger.info("Comparing, iteration #" + (iRun+1) + "...");
             for (int iSrv = 0; iSrv < nServices; iSrv++) {
-                prepareInitialContents(insertServices[iSrv], size);
-                long duration = testInsert(insertServices[iSrv], size);
+                prepareInitialContents(insertServices[iSrv], size, threads);
+                long duration = testInsert(insertServices[iSrv], size, threads);
                 resultHolders[iSrv].updateWithNewRun(duration);
             }
         }
 
         return formatOutput(resultHolders);
     }
+
+
+    /* ================= test process ==================== */
+
+    public void prepareInitialContents(TxnInsertService insertService, int nbr, int threads) {
+        logger.info("start initializing contents with " + nbr + " transactions - " + insertService.serviceLabel());
+        commonTxnRepository.deleteAll();
+        TransactionFactory factory = new TransactionFactory("EXISTING0000000000");
+
+        Transaction[] transactions = new Transaction[nbr];
+        for (int i = 0; i < nbr; i++) transactions[i] = factory.createTransaction(1 + i);
+        insertTransactionBatch(insertService, threads, transactions);
+
+        logger.info("finished initializing contents");
+
+        Time.waitMillis(1000);
+    }
+
+
+    public long testInsert(TxnInsertService insertService, int nbr, int threads) {
+        TransactionFactory factory = new TransactionFactory("TRANSACTION0000000");
+        logger.info("creating " + nbr + " current transactions - " + insertService.serviceLabel());
+        int numerotationOffset = 1000000; if (nbr > 1000000) /* strange but let's accept it */ numerotationOffset = nbr;
+
+        Transaction[] transactions = new Transaction[nbr];
+        for (int i = 0; i < nbr; i++) transactions[i] = factory.createTransaction(numerotationOffset + 1 + i);
+        logger.info("start writing " + nbr + " current transactions - " + insertService.serviceLabel());
+
+        long start = System.currentTimeMillis();
+        insertTransactionBatch(insertService, threads, transactions);
+        long end = System.currentTimeMillis();
+
+        logger.info("finished writing current transactions");
+
+        return (end-start);
+    }
+
+
+    /**
+     * Insert a number of transactions in the database table, using a thread pool
+     */
+    public void insertTransactionBatch(TxnInsertService insertService, int threads, Transaction[] transactions) {
+        if (threads <= 1) { // let's use the simplest single-thread implementation
+            for (Transaction transaction : transactions) insertService.insertTransactionWithCommit(transaction);
+            return;
+        }
+
+        ExecutorService executor = Executors.newFixedThreadPool(threads);
+
+        for (Transaction transaction : transactions) {
+            executor.execute(() ->
+                    insertService.insertTransactionWithCommit(transaction)
+            );
+        }
+        executor.shutdown();
+        try {
+            executor.awaitTermination(1, TimeUnit.DAYS); // should end way faster
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 
     private String formatOutput(TestResultHolder[] resultHolders) {
         StringBuilder sb = new StringBuilder(255);
@@ -192,6 +265,19 @@ public class TxnService {
                     .append(", maximum ").append(resultHolder.getMaxDuration())
                     .append("<br>\n");
         }
+        return sb.toString();
+    }
+
+    private String formatOutputHeader(int size, int runs, int threads, String serviceKeys) {
+        StringBuilder sb = new StringBuilder(255);
+        sb.append("Comparing ");
+        for (int iS = 0; iS < serviceKeys.length(); iS++) {
+            sb.append(serviceKeys.charAt(iS)).append(": ")
+                    .append(insertServiceMap.get(serviceKeys.charAt(iS)).serviceLabel())
+                    .append(" ");
+        }
+        sb.append("<br>&nbsp;&nbsp;&nbsp;&nbsp; batch size = ").append(size).append(", runs = ").append(runs)
+                .append(", threads = ").append(threads).append("<br>");
         return sb.toString();
     }
 }

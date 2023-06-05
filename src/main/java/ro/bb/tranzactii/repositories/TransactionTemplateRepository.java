@@ -269,7 +269,7 @@ public class TransactionTemplateRepository {
     NamedParameterJdbcTemplate template;
 
     @Autowired
-    public TransactionTemplateRepository(@Qualifier("dataSource") DataSource dataSource) {
+    public TransactionTemplateRepository(@Qualifier("dbcp2DataSource") DataSource dataSource) {
         this.dataSource = dataSource;
         template = new NamedParameterJdbcTemplate(dataSource);
     }
