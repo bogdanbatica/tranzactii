@@ -20,8 +20,7 @@ Test process:
 - Then, insert an initial contents of N rows (without taking into consideration this time)
 - The, insert another N rows and measure the duration this is taking.
 
-The contents of the rows to insert is generated ad-hoc, randomly.
-All the access to the database is done in a single thread.
+The contents of the rows to insert is generated ad-hoc, randomly but with constant lengths.
 
 Endpoints:
 - variant A: /template?size={N}
