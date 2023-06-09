@@ -34,9 +34,11 @@ Endpoints:
 Material used in the tests:
 - Database server: Oracle XE (limited to using 2 CPU from the 1.8 GHz processor, 2 GB of RAM and 12 GB of disk space)
 - Application server: Ryzen 5700U (8 cores, 16 threads, 1.8 GHz base frequency), 32 GB RAM.
-- Bandwith between the two: 100 Mbps in a local network
+- Bandwidth between the two: 100 Mbps in a local network
 
-Results of 10 single-thread runs with N = 10000 rows:
+Example of results:
+
+10 single-thread runs with N = 10000 rows:
 - one-statement: average duration 31.913 seconds, minimum 31.204, maximum 32.654
 - Spring-JDBC: average duration 41.303 seconds, minimum 39.956, maximum 44.402
 - MyBatis: average duration 41.778 seconds, minimum 41.090, maximum 42.606
@@ -45,4 +47,9 @@ Multi-thread comparison, with batch size = 10000, runs = 10, threads = 8
 - Spring-JDBC: average duration 11.501 s, minimum 10.678, maximum 13.263
 - MyBatis: average duration 12.669 s, minimum 11.748, maximum 14.294
 - Spring-JDBC 1stmt: average duration 6.452 s, minimum 4.872, maximum 8.390
+
+localhost:8080/compare?services=YB&size=20000&runs=10&threads=8
+- Spring-JDBC 1stmt: average duration 13213 ms, minimum 12023, maximum 14470
+- MyBatis: average duration 26004 ms, minimum 24475, maximum 27879
+
  

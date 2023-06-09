@@ -40,6 +40,7 @@ public class TxnController {
     @GetMapping("/runtest")
     public String testService(
             @RequestParam(value = "size", required = false) String size,
+            @RequestParam(value = "initsize", required = false) String initSize,
             @RequestParam(value = "threads", required = false) String threads,
             @RequestParam(value = "service") String service
     ) {
@@ -47,7 +48,8 @@ public class TxnController {
             return "ERROR: invalid service key " + service;
         }
         char serviceKey = service.charAt(0);
-        return txnService.testService(serviceKey, parseNumericParameter(size, DEFAULT_SIZE),
+        int batchSize = parseNumericParameter(size, DEFAULT_SIZE);
+        return txnService.testService(serviceKey, parseNumericParameter(initSize, batchSize), batchSize,
                 parseNumericParameter(threads, TxnService.DEFAULT_THREAD_POOL_SIZE));
     }
 
@@ -61,7 +63,9 @@ public class TxnController {
     @GetMapping("/compare2")
     public String comparativeTest2(@RequestParam("size") String size, @RequestParam("runs") String runs) {
         return txnService.comparativeTest(
-                parseNumericParameter(size, DEFAULT_SIZE), parseNumericParameter(runs, DEFAULT_RUNS),
+                parseNumericParameter(size, DEFAULT_SIZE),
+                parseNumericParameter(size, DEFAULT_SIZE),
+                parseNumericParameter(runs, DEFAULT_RUNS),
                 TxnService.DEFAULT_THREAD_POOL_SIZE, "YAB"
         );
     }
@@ -69,13 +73,18 @@ public class TxnController {
     @GetMapping("/compare")
     public String comparativeTest(
             @RequestParam(value = "size", required = false) String size,
+            @RequestParam(value = "initsize", required = false) String initSize,
             @RequestParam(value = "runs", required = false) String runs,
             @RequestParam(value = "threads", required = false) String threads,
             @RequestParam(value = "services") String services
     ) {
+        int batchSize = parseNumericParameter(size, DEFAULT_SIZE);
         return txnService.comparativeTest(
-                parseNumericParameter(size, DEFAULT_SIZE), parseNumericParameter(runs, DEFAULT_RUNS),
-                parseNumericParameter(threads, TxnService.DEFAULT_THREAD_POOL_SIZE), services.toUpperCase()
+                /*initSize*/ parseNumericParameter(initSize, batchSize),
+                /*testSize*/ batchSize,
+                parseNumericParameter(runs, DEFAULT_RUNS),
+                parseNumericParameter(threads, TxnService.DEFAULT_THREAD_POOL_SIZE),
+                services.toUpperCase()
         );
     }
 
@@ -95,9 +104,9 @@ public class TxnController {
     @GetMapping("/")
     public String help() {
         return "Single run of a service test: &nbsp;&nbsp;&nbsp;&nbsp;" +
-                "GET /runtest?service={service key}&size={N}&threads={thread pool size}<br><br>"
+                "GET /runtest?service={service key}&size={N}&initsize={N0}&threads={thread pool size}<br><br>"
             +  "Comparing two or more services: &nbsp;&nbsp;&nbsp;&nbsp;" +
-                "GET /compare?services={service keys}&size={N}&runs={number of runs}&threads={thread pool size}<br><br>"
+                "GET /compare?services={service keys}&size={N}&initsize={N0}&runs={number of runs}&threads={thread pool size}<br><br>"
                 + txnService.formatServiceMap();
     }
 

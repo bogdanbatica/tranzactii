@@ -22,10 +22,8 @@ public class TxnService {
 
     private final static Logger logger = LoggerFactory.getLogger(TxnService.class);
 
-    /** Numpber of threads we use in parallel to write the transactions.
-     * Value chosen so to exceed the multithreading capabiities of the database,
-     * but not to hinder the functioning of the Java application */
-    public static int DEFAULT_THREAD_POOL_SIZE = 3;
+    /** Numpber of threads we use in parallel to write the transactions, if not specified otherwise */
+    public static int DEFAULT_THREAD_POOL_SIZE = 1;
 
     @Autowired
     private CommonTxnRepository commonTxnRepository;
@@ -71,35 +69,35 @@ public class TxnService {
     /* simple duration tests */
 
     public String testJdbcTemplate(int batchSize) {
-        return testService(txnTemplateService, batchSize);
+        return testService(txnTemplateService, batchSize, batchSize);
     }
 
     public String testMyBatis(int batchSize) {
-        return testService(txnMyBatisService, batchSize);
+        return testService(txnMyBatisService, batchSize, batchSize);
     }
 
     public String testOneStatement(int batchSize) {
-        return testService(txnOneStatementService, batchSize);
+        return testService(txnOneStatementService, batchSize, batchSize);
     }
 
     public String testJdbcTemplate1(int batchSize) {
-        return testService(txnTemplateOneStatementService, batchSize);
+        return testService(txnTemplateOneStatementService, batchSize, batchSize);
     }
 
-    public String testService(TxnInsertService insertService, int batchSize) {
-        prepareInitialContents(insertService, batchSize, DEFAULT_THREAD_POOL_SIZE);
-        long duration = testInsert(insertService, batchSize, DEFAULT_THREAD_POOL_SIZE);
+    public String testService(TxnInsertService insertService, int initSize, int testSize) {
+        prepareInitialContents(insertService, initSize, DEFAULT_THREAD_POOL_SIZE);
+        long duration = testInsert(insertService, testSize, DEFAULT_THREAD_POOL_SIZE);
         return "Generation took " + duration + " ms";
     }
 
     /** Single run test on a service identified by its service key */
-    public String testService(char serviceKey, int batchSize, int threads) {
+    public String testService(char serviceKey, int initSize, int testSize, int threads) {
         TxnInsertService insertService = insertServiceMap.get(serviceKey);
         if (insertService == null) return "ERROR: Unknown service key " + serviceKey;
 
-        prepareInitialContents(insertService, batchSize, threads);
-        long duration = testInsert(insertService, batchSize, threads);
-        return insertService.serviceLabel() + " " + batchSize + " rows " + threads + " threads.  Generation took " + duration + " ms";
+        prepareInitialContents(insertService, initSize, threads);
+        long duration = testInsert(insertService, testSize, threads);
+        return insertService.serviceLabel() + " " + testSize + " rows " + threads + " threads.  Generation took " + duration + " ms";
     }
 
 
@@ -112,7 +110,7 @@ public class TxnService {
      * @return the recap of the test results in a readable format
      */
     public String testBare1stmtTemplateMybatis(int size, int runs) {
-        return comparativeTest(size, runs, DEFAULT_THREAD_POOL_SIZE, txnOneStatementService, txnTemplateService, txnMyBatisService);
+        return comparativeTest(size, size, runs, DEFAULT_THREAD_POOL_SIZE, txnOneStatementService, txnTemplateService, txnMyBatisService);
     }
 
     /**
@@ -125,7 +123,7 @@ public class TxnService {
      * @return the recap of the test results in a readable format
      */
     public String testTemplate1stmtVsDefault(int size, int runs) {
-        return comparativeTest(size, runs, DEFAULT_THREAD_POOL_SIZE, txnTemplateService, txnTemplateOneStatementService);
+        return comparativeTest(size, size, runs, DEFAULT_THREAD_POOL_SIZE, txnTemplateService, txnTemplateOneStatementService);
     }
 
     /**
@@ -138,39 +136,42 @@ public class TxnService {
      * @return the recap of the test results in a readable format
      */
     public String testTemplate1stmtVsTemplatedefaultVsMybatis(int size, int runs) {
-        return comparativeTest(size, runs, DEFAULT_THREAD_POOL_SIZE, txnTemplateOneStatementService, txnTemplateService, txnMyBatisService);
+        return comparativeTest(size, size, runs, DEFAULT_THREAD_POOL_SIZE, txnTemplateOneStatementService, txnTemplateService, txnMyBatisService);
     }
 
 
     /**
      * A more general comparative test on the inserts using different services
-     * @param size size of the transactions batch to measure (same size will be used for the initial contents of the table)
+     * @param initSize number of rows to use as initial contents of the table)
+     * @param testSize number of rows to use in the measure
      * @param runs number of times the test is run (for each access mode)
      * @param threads number of parallel threads we run a test on
      * @param serviceKeys a "word" containing one letter per service, according to the insertServicesMap
      * @return the recap of the test results in a readable format
      */
-    public String comparativeTest(int size, int runs, int threads, String serviceKeys) {
+    public String comparativeTest(int initSize, int testSize, int runs, int threads, String serviceKeys) {
         TxnInsertService[] insertServices = new TxnInsertService[serviceKeys.length()];
         for (int iS = 0; iS < insertServices.length; iS++) {
             TxnInsertService service = insertServiceMap.get(serviceKeys.charAt(iS));
             if (service == null) return "ERROR: Unknown service key " + serviceKeys.charAt(iS);
             insertServices[iS] = service;
         }
-        return formatOutputHeader(size, runs, threads, serviceKeys)
-                + comparativeTest(size, runs, threads, insertServices);
+        return formatOutputHeader(initSize, testSize, runs, threads, serviceKeys)
+                + comparativeTest(initSize, testSize, runs, threads, insertServices);
     }
 
 
     /**
      * Compare the inserts using different services
-     * @param size size of the transactions batch to measure (same size will be used for the initial contents of the table)
+     * @param initSize number of rows to use as initial contents of the table)
+     * @param testSize number of rows to use in the measure
      * @param runs number of times the test is run (for each access mode)
      * @param threads number of parallel threads we run a test on
      * @param insertServices services to use
      * @return the recap of the test results in a readable format
      */
-    public String comparativeTest(int size, int runs, int threads, TxnInsertService... insertServices) {
+    public String comparativeTest(int initSize, int testSize, int runs, int threads,
+                                  TxnInsertService... insertServices) {
         int nServices = insertServices.length;
         TestResultHolder[] resultHolders = new TestResultHolder[nServices];
         for (int iSrv = 0; iSrv < nServices; iSrv++) resultHolders[iSrv] = new TestResultHolder(insertServices[iSrv].serviceLabel());
@@ -178,15 +179,15 @@ public class TxnService {
         /* first, one warm-up run */
         logger.info("Warming up...");
         for (TxnInsertService insertService : insertServices) {
-            prepareInitialContents(insertService, size, threads);
-            testInsert(insertService, size, threads);
+            prepareInitialContents(insertService, initSize, threads);
+            testInsert(insertService, testSize, threads);
         }
         /* then, the runs to be measured */
         for (int iRun = 0; iRun < runs; iRun++) {
             logger.info("Comparing, iteration #" + (iRun+1) + "...");
             for (int iSrv = 0; iSrv < nServices; iSrv++) {
-                prepareInitialContents(insertServices[iSrv], size, threads);
-                long duration = testInsert(insertServices[iSrv], size, threads);
+                prepareInitialContents(insertServices[iSrv], initSize, threads);
+                long duration = testInsert(insertServices[iSrv], testSize, threads);
                 resultHolders[iSrv].updateWithNewRun(duration);
             }
         }
@@ -268,7 +269,7 @@ public class TxnService {
         return sb.toString();
     }
 
-    private String formatOutputHeader(int size, int runs, int threads, String serviceKeys) {
+    private String formatOutputHeader(int initSize, int testSize, int runs, int threads, String serviceKeys) {
         StringBuilder sb = new StringBuilder(255);
         sb.append("Comparing ");
         for (int iS = 0; iS < serviceKeys.length(); iS++) {
@@ -276,7 +277,9 @@ public class TxnService {
                     .append(insertServiceMap.get(serviceKeys.charAt(iS)).serviceLabel())
                     .append(" ");
         }
-        sb.append("<br>&nbsp;&nbsp;&nbsp;&nbsp; batch size = ").append(size).append(", runs = ").append(runs)
+        sb.append("<br>&nbsp;&nbsp;&nbsp;&nbsp; rows = ").append(testSize)
+                .append(" (with initial ").append(initSize).append(')')
+                .append(", runs = ").append(runs)
                 .append(", threads = ").append(threads).append("<br>");
         return sb.toString();
     }
