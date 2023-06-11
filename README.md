@@ -17,7 +17,7 @@ and use with JdbcTemplate.update(PreparedStatementCreator)
 
 Test process:
 - First, empty the table.
-- Then, insert an initial contents of N rows (without taking into consideration this time)
+- Then, insert an initial contents of N0 rows (without taking into consideration this time)
 - The, insert another N rows and measure the duration this is taking.
 
 The contents of the rows to insert is generated ad-hoc, randomly but with constant lengths.
@@ -27,8 +27,8 @@ Endpoints:
 - variant B: /mybatis?size={N}
 - variant Z: /onestmt?size={N}
 - variant Y: /template1?size={N}
-- generic run of one A,B,Z, or Y: /runtest?service={code letter}&size={N}&threads={thread pool size}
-- comparison between 2 or more services:  /compare?services={code letters}&size={N}&runs={number of runs}&threads={thread pool size}
+- generic run of one A,B,Z, or Y: /runtest?service={code letter}&initsize={N0}&size={N}&threads={thread pool size}
+- comparison between 2 or more services:  /compare?services={code letters}&initsize={N0}&size={N}&runs={number of runs}&threads={thread pool size}
 - "help" (list of services and possible requests): /
 
 Material used in the tests:
@@ -52,4 +52,6 @@ localhost:8080/compare?services=YB&size=20000&runs=10&threads=8
 - Spring-JDBC 1stmt: average duration 13213 ms, minimum 12023, maximum 14470
 - MyBatis: average duration 26004 ms, minimum 24475, maximum 27879
 
- 
+localhost:8080/compare?services=YA&size=50000&initsize=1000&runs=5&threads=8
+- Spring-JDBC 1stmt: average duration 34667 ms, minimum 30450, maximum 36556
+- Spring-JDBC: average duration 59505 ms, minimum 57652, maximum 60923
